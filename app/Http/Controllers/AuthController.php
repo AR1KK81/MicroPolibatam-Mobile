@@ -130,5 +130,45 @@ class AuthController extends Controller
 
         return redirect()->route('login');
     }
+
+    /**
+     * Change the authenticated user's password from Pengaturan Akun.
+     */
+    public function changePassword(Request $request): RedirectResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $validated = $request->validate(
+            [
+                'current_password' => ['required', 'string'],
+                'password' => ['required', 'string', 'min:8', 'confirmed'],
+            ],
+            [
+                'current_password.required' => 'Kata sandi saat ini wajib diisi.',
+                'password.required' => 'Kata sandi baru wajib diisi.',
+                'password.min' => 'Kata sandi baru minimal 8 karakter.',
+                'password.confirmed' => 'Konfirmasi kata sandi baru tidak cocok.',
+            ]
+        );
+
+        if (! Hash::check((string) $validated['current_password'], (string) $user->getAuthPassword())) {
+            return back()->withErrors([
+                'current_password' => 'Kata sandi saat ini tidak sesuai.',
+            ]);
+        }
+
+        $user->password_hash = Hash::make((string) $validated['password']);
+        $user->save();
+
+        AuditLog::record(
+            actor: $user->email,
+            action: 'CHANGE_PASSWORD',
+            object: 'Pengaturan Akun',
+            result: 'Mengubah kata sandi akun melalui menu Pengaturan Akun'
+        );
+
+        return back()->with('status', 'Kata sandi akun Anda berhasil diperbarui!');
+    }
 }
 

@@ -195,5 +195,173 @@ class AuthLoginTest extends TestCase
             'action' => 'LOGIN_FAILED',
         ]);
     }
+
+    public function test_maba_can_register_via_two_step_otp_and_is_logged_in(): void
+    {
+        $this->get('/register')
+            ->assertOk()
+            ->assertSee('Daftar Akun Maba')
+            ->assertSee('LANGKAH 1 DARI 2')
+            ->assertSee('LANGKAH 2 DARI 2');
+
+        $sendResponse = $this->post('/register/send-otp', [
+            'email' => 's4ndhiar@gmail.com',
+            'password' => 'MabaBaru123!',
+        ]);
+
+        $sendResponse->assertRedirect('/register');
+
+        $cachePayload = \Illuminate\Support\Facades\Cache::get('pmb_maba_reg_otp:' . sha1('s4ndhiar@gmail.com'));
+        $this->assertIsArray($cachePayload);
+        $this->assertNotEmpty($cachePayload['dev_otp']);
+
+        $verifyResponse = $this->post('/register/verify', [
+            'otp' => $cachePayload['dev_otp'],
+        ]);
+
+        $verifyResponse->assertRedirect('/maba/dashboard');
+        $this->assertAuthenticated();
+        $this->assertDatabaseHas('users', [
+            'email' => 's4ndhiar@gmail.com',
+            'role' => 'maba',
+            'is_verified' => 1,
+        ]);
+    }
+
+    public function test_user_can_reset_password_via_otp_flow(): void
+    {
+        User::query()->create([
+            'email' => 'budi.maba01@gmail.com',
+            'password_hash' => Hash::make('Lama12345!'),
+            'role' => UserRole::Maba,
+            'is_verified' => true,
+        ]);
+
+        $this->post('/forgot-password/send-otp', [
+            'email' => 'budi.maba01@gmail.com',
+        ])->assertRedirect('/forgot-password/verify');
+
+        $cachePayload = \Illuminate\Support\Facades\Cache::get('pmb_pwd_otp:' . sha1('budi.maba01@gmail.com'));
+        $this->assertIsArray($cachePayload);
+
+        $this->post('/forgot-password/verify', [
+            'otp' => $cachePayload['dev_otp'],
+        ])->assertRedirect('/forgot-password/reset');
+
+        $this->post('/forgot-password/reset', [
+            'password' => 'Baru99999!',
+            'password_confirmation' => 'Baru99999!',
+        ])->assertRedirect('/login');
+
+        $this->post('/login', [
+            'email' => 'budi.maba01@gmail.com',
+            'password' => 'Baru99999!',
+        ])->assertRedirect('/maba/dashboard');
+    }
+
+    public function test_all_four_portals_render_and_process_functional_workflows(): void
+    {
+        $track = \App\Models\Track::query()->create([
+            'department_name' => 'Teknik Informatika',
+            'study_program_name' => 'TRPL',
+            'track_name' => 'Microcredential Web Dev',
+            'is_active' => true,
+        ]);
+
+        $rekening = \App\Models\Rekening::query()->create([
+            'bank_name' => 'Bank BNI',
+            'account_number' => '1003301245',
+            'account_name' => 'Politeknik Negeri Batam',
+            'nominal_biaya' => 200000,
+            'is_active' => true,
+        ]);
+
+        $maba = User::query()->create([
+            'email' => 'maba@polibatam.ac.id',
+            'password_hash' => Hash::make('Secret123!'),
+            'role' => UserRole::Maba,
+            'is_verified' => true,
+        ]);
+
+        $admin = User::query()->create([
+            'email' => 'admin@polibatam.ac.id',
+            'password_hash' => Hash::make('Secret123!'),
+            'role' => UserRole::Admin,
+            'is_verified' => true,
+        ]);
+
+        $keuangan = User::query()->create([
+            'email' => 'keuangan@polibatam.ac.id',
+            'password_hash' => Hash::make('Secret123!'),
+            'role' => UserRole::Keuangan,
+            'is_verified' => true,
+        ]);
+
+        $superAdmin = User::query()->create([
+            'email' => 'super@polibatam.ac.id',
+            'password_hash' => Hash::make('Secret123!'),
+            'role' => UserRole::SuperAdmin,
+            'is_verified' => true,
+        ]);
+
+        // 1. Maba workflow
+        $this->actingAs($maba)->get('/maba/dashboard')->assertOk();
+        $this->actingAs($maba)->get('/maba/formulir?tab=biodata')->assertOk();
+        $this->actingAs($maba)->post('/maba/formulir/biodata', [
+            'full_name' => 'Budi Santoso',
+            'nik' => '2171041205060001',
+            'birth_place' => 'Batam',
+            'birth_date' => '2006-05-12',
+            'origin_school' => 'SMKN 1 Batam',
+            'address' => 'Batam Centre',
+            'track_id' => $track->track_id,
+        ])->assertRedirect('/maba/formulir?tab=dokumen');
+
+        $this->actingAs($maba)->get('/maba/formulir?tab=dokumen')->assertOk();
+        $this->actingAs($maba)->get('/maba/formulir?tab=bayar')->assertOk();
+        $this->actingAs($maba)->get('/maba/status')->assertOk();
+        $this->actingAs($maba)->get('/maba/profil')->assertOk();
+
+        $registration = \App\Models\Registration::query()->firstOrFail();
+
+        \App\Models\Document::query()->create([
+            'registration_id' => $registration->registration_id,
+            'doc_type' => 'ktp',
+            'file_path' => 'uploads/dokumen/ktp_test.jpg',
+            'status_verifikasi_admin' => 'menunggu',
+        ]);
+
+        $payment = \App\Models\Payment::query()->create([
+            'registration_id' => $registration->registration_id,
+            'rekening_id' => $rekening->rekening_id,
+            'amount' => 200000,
+            'proof_file_path' => 'uploads/bukti_bayar/bni_test.jpg',
+            'status_pembayaran' => 'menunggu',
+        ]);
+
+        // 2. Admin workflow
+        $this->actingAs($admin)->get('/admin/dashboard')->assertOk();
+        $this->actingAs($admin)->get('/admin/registrations/' . $registration->registration_id)->assertOk();
+        $this->actingAs($admin)->post('/admin/registrations/' . $registration->registration_id . '/verify', [
+            'action_type' => 'approve_all',
+        ])->assertRedirect('/admin/dashboard?tab=disetujui');
+        $this->actingAs($admin)->get('/admin/riwayat')->assertOk();
+        $this->actingAs($admin)->get('/admin/profil')->assertOk();
+
+        // 3. Keuangan workflow
+        $this->actingAs($keuangan)->get('/keuangan/dashboard')->assertOk();
+        $this->actingAs($keuangan)->get('/keuangan/payments/' . $payment->payment_id)->assertOk();
+        $this->actingAs($keuangan)->post('/keuangan/payments/' . $payment->payment_id . '/verify', [
+            'action_type' => 'confirm_lunas',
+        ])->assertRedirect('/keuangan/dashboard?tab=lunas');
+        $this->actingAs($keuangan)->get('/keuangan/riwayat')->assertOk();
+        $this->actingAs($keuangan)->get('/keuangan/profil')->assertOk();
+
+        // 4. Super Admin workflow
+        $this->actingAs($superAdmin)->get('/super-admin/dashboard')->assertOk();
+        $this->actingAs($superAdmin)->get('/super-admin/master')->assertOk();
+        $this->actingAs($superAdmin)->get('/super-admin/audit')->assertOk();
+        $this->actingAs($superAdmin)->get('/super-admin/profil')->assertOk();
+    }
 }
 

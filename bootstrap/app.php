@@ -17,6 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureUserHasRole::class,
         ]);
 
+        $middleware->validateCsrfTokens(except: [
+            'api/*',
+        ]);
+
         $middleware->redirectGuestsTo(fn (): string => route('login'));
         $middleware->redirectUsersTo(function (Request $request): string {
             $user = $request->user();

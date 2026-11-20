@@ -41,6 +41,16 @@
 
                 <!-- Login Card -->
                 <div class="mt-6 w-full rounded-[22px] border border-[#E3ECFB] bg-white p-6 sm:p-7 text-left shadow-[0_10px_35px_rgba(15,35,95,0.045)]">
+                    @if (session('status'))
+                        <div class="mb-5 rounded-[13px] border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-[13px] text-emerald-800 flex items-start gap-2.5">
+                            <svg class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                <polyline points="22 4 12 14.01 9 11.01" />
+                            </svg>
+                            <span>{{ session('status') }}</span>
+                        </div>
+                    @endif
+
                     @if ($errors->any())
                         <div class="mb-5 rounded-[13px] border border-red-200 bg-red-50/80 px-4 py-3 text-[13px] text-red-700 flex items-start gap-2.5">
                             <svg class="w-4 h-4 text-red-600 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -92,13 +102,12 @@
                                 <label for="password" class="text-[13.5px] font-bold text-[#0F172A]">
                                     Kata Sandi
                                 </label>
-                                <button
-                                    type="button"
-                                    onclick="openModal('forgotPasswordModal')"
-                                    class="text-[12.5px] font-bold text-[#0052CC] hover:text-[#003E9C] hover:underline cursor-pointer"
+                                <a
+                                    href="{{ route('password.otp.request') }}"
+                                    class="text-[12.5px] font-bold text-[#0052CC] hover:text-[#003E9C] hover:underline"
                                 >
                                     Lupa kata sandi?
-                                </button>
+                                </a>
                             </div>
                             <div class="relative">
                                 <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-[#64748B]">
@@ -191,12 +200,10 @@
             <p class="text-[13.5px] text-[#64748B] leading-relaxed">
                 Belum punya akun?
                 <a
-                    href="https://registrasi.polibatam.ac.id"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href="{{ route('register') }}"
                     class="font-bold text-[#0052CC] hover:text-[#003E9C] hover:underline"
                 >
-                    Silakan mendaftar via Website Resmi PMB.
+                    Daftar disini.
                 </a>
             </p>
 
@@ -206,7 +213,7 @@
                     <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
                 </svg>
                 <span class="leading-snug">
-                    Jam operasional: Senin – Jumat (08.00 – 17.00 WIB) &bull; Layanan WhatsApp Terpadu
+                    Jam operasional: Senin – Jumat (08.00 – 17.00 WIB) &bull; 
                 </span>
             </div>
         </footer>
@@ -225,7 +232,7 @@
                         Layanan Terpadu
                     </span>
                     <h2 class="mt-1.5 text-lg font-extrabold text-[#0F172A]">
-                        Pusat Bantuan &amp; Informasi PMB
+                        Pusat Bantuan &amp; Informasi
                     </h2>
                     <p class="text-[12.5px] text-[#64748B] mt-0.5">
                         Senin – Jumat (08.00 – 17.00 WIB)
