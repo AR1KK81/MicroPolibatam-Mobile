@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../services/pmb_data_store.dart';
+import '../../widgets/pmb_widgets.dart';
 import 'admin_kelola_berkas_screen.dart';
 import 'admin_riwayat_screen.dart';
 import 'admin_profil_screen.dart';
 
+/// ============================================================================
+/// BAGIAN 2: SHELL UTAMA USER ADMIN AKADEMIK (STAF ADMISI & REGISTRASI)
+/// Mengelompokkan 3 halaman utama Admin: Kelola Berkas, Riwayat, dan Profil
+/// ============================================================================
 class AdminShellScreen extends StatefulWidget {
   final PmbDataStore store;
 
@@ -25,27 +30,26 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     ];
 
     return Scaffold(
-      body: pages[_selectedIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFE8F0FE),
-        onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.assignment_outlined),
-            selectedIcon: Icon(Icons.assignment_rounded, color: Color(0xFF0052CC)),
+      backgroundColor: const Color(0xFFFBF8FF),
+      body: SafeArea(child: pages[_selectedIndex]),
+      bottomNavigationBar: PmbBottomNavBar(
+        currentIndex: _selectedIndex,
+        onTap: (idx) => setState(() => _selectedIndex = idx),
+        items: const [
+          PmbNavItem(
             label: 'Kelola Berkas',
+            icon: Icons.description_outlined,
+            activeIcon: Icons.description,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.history_rounded),
-            selectedIcon: Icon(Icons.history_rounded, color: Color(0xFF0052CC)),
+          PmbNavItem(
             label: 'Riwayat',
+            icon: Icons.history_outlined,
+            activeIcon: Icons.history,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded, color: Color(0xFF0052CC)),
+          PmbNavItem(
             label: 'Profil',
+            icon: Icons.person_outline,
+            activeIcon: Icons.person,
           ),
         ],
       ),

@@ -641,6 +641,27 @@ class PmbDataStore extends ChangeNotifier {
     return true;
   }
 
+  String? changeCurrentUserPassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) {
+    if (currentUser == null) return 'Sesi tidak ditemukan.';
+    if (currentUser!.password != currentPassword) {
+      return 'Kata sandi saat ini tidak sesuai.';
+    }
+    if (newPassword.length < 8) {
+      return 'Kata sandi baru minimal 8 karakter.';
+    }
+    if (newPassword != confirmPassword) {
+      return 'Konfirmasi kata sandi baru tidak cocok.';
+    }
+    currentUser!.password = newPassword;
+    recordAudit(currentUser!.email, 'CHANGE_PASSWORD', 'Profil Akun', 'Berhasil memperbarui kata sandi akun');
+    notifyListeners();
+    return null;
+  }
+
   // ================= HELPER LOOKUPS =================
   RegistrationItem getOrCreateCurrentMabaRegistration() {
     final user = currentUser!;

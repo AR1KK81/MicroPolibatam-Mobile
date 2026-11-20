@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../services/pmb_data_store.dart';
+import '../../widgets/pmb_widgets.dart';
 import 'keuangan_kelola_bayar_screen.dart';
 import 'keuangan_riwayat_screen.dart';
 import 'keuangan_profil_screen.dart';
 
+/// ============================================================================
+/// BAGIAN 3: SHELL UTAMA USER STAF KEUANGAN
+/// Mengelompokkan 3 halaman utama Staf Keuangan: Kelola Bayar, Riwayat Bayar, Profil
+/// ============================================================================
 class KeuanganShellScreen extends StatefulWidget {
   final PmbDataStore store;
 
@@ -25,27 +30,26 @@ class _KeuanganShellScreenState extends State<KeuanganShellScreen> {
     ];
 
     return Scaffold(
-      body: pages[_selectedIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFE8F0FE),
-        onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.credit_card_outlined),
-            selectedIcon: Icon(Icons.credit_card_rounded, color: Color(0xFF0052CC)),
+      backgroundColor: const Color(0xFFFBF8FF),
+      body: SafeArea(child: pages[_selectedIndex]),
+      bottomNavigationBar: PmbBottomNavBar(
+        currentIndex: _selectedIndex,
+        onTap: (idx) => setState(() => _selectedIndex = idx),
+        items: const [
+          PmbNavItem(
             label: 'Kelola Bayar',
+            icon: Icons.payments_outlined,
+            activeIcon: Icons.payments,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.history_rounded),
-            selectedIcon: Icon(Icons.history_rounded, color: Color(0xFF0052CC)),
+          PmbNavItem(
             label: 'Riwayat Bayar',
+            icon: Icons.receipt_long_outlined,
+            activeIcon: Icons.receipt_long,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded, color: Color(0xFF0052CC)),
+          PmbNavItem(
             label: 'Profil',
+            icon: Icons.person_outline,
+            activeIcon: Icons.person,
           ),
         ],
       ),

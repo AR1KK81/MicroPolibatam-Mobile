@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../services/pmb_data_store.dart';
 
+/// ============================================================================
+/// BAGIAN 4C: KELOLA NOMOR REKENING & VA (USER SUPER ADMIN)
+/// Sama persis dengan `resources/views/super-admin/rekening.blade.php`
+/// (Menggunakan halaman form penuh inline, bukan modal bottom sheet)
+/// ============================================================================
 class SuperAdminRekeningScreen extends StatefulWidget {
   final PmbDataStore store;
 
@@ -13,241 +18,543 @@ class SuperAdminRekeningScreen extends StatefulWidget {
 class _SuperAdminRekeningScreenState extends State<SuperAdminRekeningScreen> {
   String _search = '';
 
-  void _openForm({RekeningItem? existing}) {
-    String bankName = existing?.bankName ?? 'BNI';
-    final numberCtrl = TextEditingController(text: existing?.accountNumber ?? '');
-    final ownerCtrl = TextEditingController(text: existing?.accountName ?? 'Politeknik Negeri Batam');
-    final prefixCtrl = TextEditingController(text: existing?.prefixVa ?? '8008');
-    bool isMain = existing?.isMain ?? true;
+  // State untuk halaman form penuh inline (`@if ($showForm)` di `rekening.blade.php`)
+  bool _showForm = false;
+  RekeningItem? _editingItem;
+  String _bankName = 'BNI';
+  final _numberCtrl = TextEditingController();
+  final _nameCtrl = TextEditingController();
+  final _prefixCtrl = TextEditingController();
+  bool _isMain = true;
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      existing == null ? 'Tambah Rekening' : 'Edit Rekening',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                    ),
-                    IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  initialValue: ['BNI', 'BRI', 'Mandiri', 'BCA', 'BSI'].contains(bankName) ? bankName : 'BNI',
-                  decoration: const InputDecoration(labelText: 'Nama Bank'),
-                  items: ['BNI', 'BRI', 'Mandiri', 'BCA', 'BSI'].map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
-                  onChanged: (v) => setModalState(() => bankName = v ?? 'BNI'),
-                ),
-                const SizedBox(height: 10),
-                TextField(controller: numberCtrl, decoration: const InputDecoration(labelText: 'Nomor Rekening')),
-                const SizedBox(height: 10),
-                TextField(controller: ownerCtrl, decoration: const InputDecoration(labelText: 'Atas Nama')),
-                const SizedBox(height: 10),
-                TextField(controller: prefixCtrl, decoration: const InputDecoration(labelText: 'Prefix Virtual Account')),
-                const SizedBox(height: 10),
-                SwitchListTile(
-                  title: const Text('Jadikan rekening utama', style: TextStyle(fontWeight: FontWeight.w700)),
-                  value: isMain,
-                  onChanged: (v) => setModalState(() => isMain = v),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          widget.store.saveRekening(
-                            rekeningId: existing?.rekeningId,
-                            bankName: bankName,
-                            accountNumber: numberCtrl.text,
-                            accountName: ownerCtrl.text,
-                            prefixVa: prefixCtrl.text,
-                            isMain: isMain,
-                          );
-                          Navigator.pop(ctx);
-                          setState(() {});
-                        },
-                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0052CC), foregroundColor: Colors.white),
-                        child: const Text('✓ Simpan'),
-                      ),
-                    ),
-                    if (existing != null) ...[
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            widget.store.deleteRekening(existing.rekeningId);
-                            Navigator.pop(ctx);
-                            setState(() {});
-                          },
-                          style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
-                          child: const Text('🗑️ Hapus Rekening'),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
+  @override
+  void dispose() {
+    _numberCtrl.dispose();
+    _nameCtrl.dispose();
+    _prefixCtrl.dispose();
+    super.dispose();
+  }
+
+  void _openForm({RekeningItem? existing}) {
+    setState(() {
+      _editingItem = existing;
+      _bankName = existing?.bankName ?? 'BNI';
+      _numberCtrl.text = existing?.accountNumber ?? '';
+      _nameCtrl.text = existing?.accountName ?? 'Politeknik Negeri Batam';
+      _prefixCtrl.text = existing?.prefixVa ?? '8008';
+      _isMain = existing?.isMain ?? true;
+      _showForm = true;
+    });
+  }
+
+  void _saveForm() {
+    if (_numberCtrl.text.trim().isEmpty) return;
+    widget.store.saveRekening(
+      rekeningId: _editingItem?.rekeningId,
+      bankName: _bankName,
+      accountNumber: _numberCtrl.text.trim(),
+      accountName: _nameCtrl.text.trim(),
+      prefixVa: _prefixCtrl.text.trim(),
+      isMain: _isMain,
+    );
+    setState(() => _showForm = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _editingItem != null
+              ? 'Data rekening pembayaran berhasil diperbarui.'
+              : 'Rekening pembayaran baru berhasil ditambahkan.',
         ),
+        backgroundColor: const Color(0xFF059669),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final list = widget.store.rekenings.where((r) {
+    if (_showForm) {
+      return _buildInlineFormView();
+    }
+
+    final all = widget.store.rekenings;
+    final filtered = all.where((r) {
       if (_search.isEmpty) return true;
-      return r.bankName.toLowerCase().contains(_search.toLowerCase()) || r.accountNumber.contains(_search);
+      final q = _search.toLowerCase();
+      return r.bankName.toLowerCase().contains(q) ||
+          r.accountNumber.toLowerCase().contains(q) ||
+          r.accountName.toLowerCase().contains(q);
     }).toList();
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFBF8FF),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header (Image 7 Frame 4)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: const Color(0xFFDCE9FF), borderRadius: BorderRadius.circular(99)),
-                        child: const Text('🏛️ MASTER DATA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF003BA5))),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDCE9FF),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Text(
+                      '🛡️ MASTER DATA',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF003BA5),
                       ),
-                      const SizedBox(height: 6),
-                      const Text('Nomor Rekening', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-                      Text('${list.length} rekening terdaftar', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                    ],
+                    ),
                   ),
-                  IconButton(
-                    onPressed: () => _openForm(),
-                    icon: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.add)),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Nomor Rekening',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF161A30),
+                    ),
+                  ),
+                  Text(
+                    '${all.length} rekening terdaftar',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-              ElevatedButton.icon(
-                onPressed: () => _openForm(),
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('Tambah Rekening'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0052CC),
-                  foregroundColor: Colors.white,
-                  shape: const StadiumBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                onChanged: (v) => setState(() => _search = v),
-                decoration: InputDecoration(
-                  hintText: 'Cari bank, nomor, atas nama...',
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                ),
-              ),
-              const SizedBox(height: 14),
-              ...list.map(
-                (rek) => Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(color: const Color(0xFFE8F0FE), borderRadius: BorderRadius.circular(12)),
-                            child: const Icon(Icons.account_balance_outlined, color: Color(0xFF003BA5)),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(rek.bankName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-                              Text(rek.accountNumber, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800)),
-                              const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: rek.isMain ? const Color(0xFFD1FAE5) : const Color(0xFFE8F0FE),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  rek.isMain ? 'Utama' : (rek.isActive ? 'Aktif' : 'Nonaktif'),
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    color: rek.isMain ? const Color(0xFF059669) : const Color(0xFF0052CC),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Text('Atas nama: ${rek.accountName}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                      Text('Prefix VA: ${rek.prefixVa}', style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _openForm(existing: rek),
-                              icon: const Icon(Icons.edit_outlined, size: 15),
-                              label: const Text('Edit'),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                widget.store.deleteRekening(rek.rekeningId);
-                                setState(() {});
-                              },
-                              icon: const Icon(Icons.delete_outline, size: 15, color: Color(0xFFDC2626)),
-                              label: const Text('Hapus', style: TextStyle(color: Color(0xFFDC2626))),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+              InkWell(
+                onTap: () => _openForm(),
+                borderRadius: BorderRadius.circular(999),
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF1EFFF),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    '+',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF161A30),
+                    ),
                   ),
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 12),
+
+          ElevatedButton(
+            onPressed: () => _openForm(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0052CC),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+              elevation: 1,
+            ),
+            child: const Text(
+              '+ Tambah Rekening',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          TextField(
+            onChanged: (v) => setState(() => _search = v),
+            style: const TextStyle(fontSize: 13, color: Color(0xFF161A30)),
+            decoration: InputDecoration(
+              hintText: 'Cari bank, nomor, atas nama...',
+              hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+              prefixIcon: const Icon(Icons.search, size: 18, color: Color(0xFF94A3B8)),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: Color(0xFFE8ECF8)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: Color(0xFFE8ECF8)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          ...filtered.map((rek) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFECEEF8)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F0FE),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Text('🏦', style: TextStyle(fontSize: 16)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              rek.bankName,
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF161A30),
+                              ),
+                            ),
+                            Text(
+                              rek.accountNumber,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF161A30),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: rek.isMain || rek.isActive
+                                    ? const Color(0xFFD1FAE5)
+                                    : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                rek.isMain
+                                    ? 'Utama'
+                                    : rek.isActive
+                                        ? 'Aktif'
+                                        : 'Nonaktif',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: rek.isMain || rek.isActive
+                                      ? const Color(0xFF059669)
+                                      : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Atas nama: ${rek.accountName}',
+                    style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                  ),
+                  Text(
+                    'Prefix VA: ${rek.prefixVa}',
+                    style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => _openForm(existing: rek),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF161A30),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            padding: const EdgeInsets.symmetric(vertical: 9),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
+                          child: const Text(
+                            '✎ Edit',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => widget.store.deleteRekening(rek.rekeningId),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFDC2626),
+                            side: const BorderSide(color: Color(0xFFFECACA)),
+                            padding: const EdgeInsets.symmetric(vertical: 9),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
+                          child: const Text(
+                            '🗑️ Hapus',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  /// Halaman Form Penuh Inline sesuai `@if ($showForm)` di `resources/views/super-admin/rekening.blade.php`
+  Widget _buildInlineFormView() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _editingItem != null ? 'Edit Rekening' : 'Tambah Rekening',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF161A30),
+                    ),
+                  ),
+                  const Text(
+                    'Rekening penerima pembayaran',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  ),
+                ],
+              ),
+              InkWell(
+                onTap: () => setState(() => _showForm = false),
+                borderRadius: BorderRadius.circular(999),
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF1EFFF),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    '✕',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF434655),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          _buildFieldLabel('Nama Bank'),
+          DropdownButtonFormField<String>(
+            initialValue: _bankName,
+            decoration: _whiteInputDecoration(),
+            items: ['BNI', 'BRI', 'Mandiri', 'BSI', 'BTN']
+                .map((b) => DropdownMenuItem(
+                      value: b,
+                      child: Text(b, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    ))
+                .toList(),
+            onChanged: (v) {
+              if (v != null) setState(() => _bankName = v);
+            },
+          ),
+          const SizedBox(height: 14),
+
+          _buildFieldLabel('Nomor Rekening'),
+          TextField(
+            controller: _numberCtrl,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            decoration: _whiteInputDecoration(hint: '0238 5419 82', prefixEmoji: '💳'),
+          ),
+          const SizedBox(height: 14),
+
+          _buildFieldLabel('Atas Nama'),
+          TextField(
+            controller: _nameCtrl,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            decoration: _whiteInputDecoration(hint: 'Politeknik Negeri Batam'),
+          ),
+          const SizedBox(height: 14),
+
+          _buildFieldLabel('Prefix Virtual Account'),
+          TextField(
+            controller: _prefixCtrl,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            decoration: _whiteInputDecoration(hint: '8008', prefixEmoji: '🏦'),
+          ),
+          const SizedBox(height: 14),
+
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE8ECF8)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Jadikan rekening utama',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF161A30),
+                  ),
+                ),
+                Switch(
+                  value: _isMain,
+                  activeTrackColor: const Color(0xFF0052CC),
+                  onChanged: (v) => setState(() => _isMain = v),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Sinkronisasi VA otomatis Info Card (`rekening.blade.php` lines 102-107)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFECEEF8)),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Sinkronisasi VA otomatis',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0052CC),
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Rekening yang aktif dipakai untuk membuat nomor VA baru Maba. Perubahan prefix hanya berlaku untuk registrasi berikutnya.',
+                  style: TextStyle(fontSize: 11.5, height: 1.4, color: Color(0xFF64748B)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _saveForm,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0052CC),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                    elevation: 1,
+                  ),
+                  child: const Text(
+                    '✓ Simpan',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+              if (_editingItem != null) ...[
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      widget.store.deleteRekening(_editingItem!.rekeningId);
+                      setState(() => _showForm = false);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFFDC2626),
+                      side: const BorderSide(color: Color(0xFFFECACA)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                    ),
+                    child: const Text(
+                      '🗑️ Hapus Rekening',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFieldLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF64748B),
         ),
+      ),
+    );
+  }
+
+  InputDecoration _whiteInputDecoration({String? hint, String? prefixEmoji}) {
+    return InputDecoration(
+      hintText: hint,
+      prefixIcon: prefixEmoji != null
+          ? UnconstrainedBox(
+              child: Text(prefixEmoji, style: const TextStyle(fontSize: 14)),
+            )
+          : null,
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFE8ECF8)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFE8ECF8)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFF0052CC), width: 1.5),
       ),
     );
   }

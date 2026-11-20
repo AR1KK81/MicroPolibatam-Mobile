@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../services/pmb_data_store.dart';
+import '../../widgets/pmb_widgets.dart';
 import 'maba_beranda_screen.dart';
 import 'maba_status_screen.dart';
 import 'maba_profil_screen.dart';
-import 'maba_formulir_screen.dart';
 
+/// ============================================================================
+/// BAGIAN 1: SHELL UTAMA USER MABA (CALON MAHASISWA BARU)
+/// Mengelompokkan 3 halaman utama Maba: Beranda, Status, dan Profil
+/// ============================================================================
 class MabaShellScreen extends StatefulWidget {
   final PmbDataStore store;
 
@@ -17,55 +21,39 @@ class MabaShellScreen extends StatefulWidget {
 class _MabaShellScreenState extends State<MabaShellScreen> {
   int _selectedIndex = 0;
 
-  void _openFormulir({int initialTab = 0}) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => MabaFormulirScreen(store: widget.store, initialTab: initialTab),
-      ),
-    );
+  void _switchTab(int index) {
+    setState(() => _selectedIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
     final pages = [
-      MabaBerandaScreen(
-        store: widget.store,
-        onOpenFormulir: (tab) => _openFormulir(initialTab: tab),
-        onSwitchTab: (idx) => setState(() => _selectedIndex = idx),
-      ),
-      MabaStatusScreen(
-        store: widget.store,
-        onOpenFormulir: (tab) => _openFormulir(initialTab: tab),
-      ),
-      MabaProfilScreen(
-        store: widget.store,
-        onOpenFormulir: () => _openFormulir(initialTab: 0),
-      ),
+      MabaBerandaScreen(store: widget.store, onSwitchTab: _switchTab),
+      MabaStatusScreen(store: widget.store, onSwitchTab: _switchTab),
+      MabaProfilScreen(store: widget.store, onSwitchTab: _switchTab),
     ];
 
     return Scaffold(
-      body: pages[_selectedIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFE8F0FE),
-        onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded, color: Color(0xFF003BA5)),
+      backgroundColor: const Color(0xFFFBF8FF),
+      body: SafeArea(child: pages[_selectedIndex]),
+      bottomNavigationBar: PmbBottomNavBar(
+        currentIndex: _selectedIndex,
+        onTap: _switchTab,
+        items: const [
+          PmbNavItem(
             label: 'Beranda',
+            icon: Icons.home_outlined,
+            activeIcon: Icons.home,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.fact_check_outlined),
-            selectedIcon: Icon(Icons.fact_check_rounded, color: Color(0xFF003BA5)),
+          PmbNavItem(
             label: 'Status',
+            icon: Icons.fact_check_outlined,
+            activeIcon: Icons.fact_check,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded, color: Color(0xFF003BA5)),
+          PmbNavItem(
             label: 'Profil',
+            icon: Icons.person_outline,
+            activeIcon: Icons.person,
           ),
         ],
       ),

@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../services/pmb_data_store.dart';
+import '../../widgets/pmb_widgets.dart';
 import 'super_admin_beranda_screen.dart';
 import 'super_admin_helpdesk_screen.dart';
 import 'super_admin_rekening_screen.dart';
 import 'super_admin_jurusan_screen.dart';
 import 'super_admin_users_screen.dart';
 
+/// ============================================================================
+/// BAGIAN 4: SHELL UTAMA USER SUPER ADMIN
+/// Mengelompokkan 5 halaman utama Super Admin sesuai `components/super-admin-nav.blade.php`:
+/// 1. Beranda  2. Helpdesk  3. Rekening  4. Jurusan  5. User
+/// ============================================================================
 class SuperAdminShellScreen extends StatefulWidget {
   final PmbDataStore store;
 
@@ -18,13 +24,14 @@ class SuperAdminShellScreen extends StatefulWidget {
 class _SuperAdminShellScreenState extends State<SuperAdminShellScreen> {
   int _selectedIndex = 0;
 
+  void _switchTab(int index) {
+    setState(() => _selectedIndex = index);
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
-      SuperAdminBerandaScreen(
-        store: widget.store,
-        onNavigateTab: (idx) => setState(() => _selectedIndex = idx),
-      ),
+      SuperAdminBerandaScreen(store: widget.store, onNavigateTab: _switchTab),
       SuperAdminHelpdeskScreen(store: widget.store),
       SuperAdminRekeningScreen(store: widget.store),
       SuperAdminJurusanScreen(store: widget.store),
@@ -32,37 +39,37 @@ class _SuperAdminShellScreenState extends State<SuperAdminShellScreen> {
     ];
 
     return Scaffold(
-      body: pages[_selectedIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFE8F0FE),
-        onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded, color: Color(0xFF0052CC)),
+      backgroundColor: const Color(0xFFFBF8FF),
+      body: SafeArea(child: pages[_selectedIndex]),
+      bottomNavigationBar: PmbBottomNavBar(
+        currentIndex: _selectedIndex,
+        onTap: _switchTab,
+        showActivePill: true,
+        items: const [
+          PmbNavItem(
             label: 'Beranda',
+            icon: Icons.home_outlined,
+            activeIcon: Icons.home,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.headset_mic_outlined),
-            selectedIcon: Icon(Icons.headset_mic_rounded, color: Color(0xFF0052CC)),
+          PmbNavItem(
             label: 'Helpdesk',
+            icon: Icons.headset_mic_outlined,
+            activeIcon: Icons.headset_mic,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.credit_card_outlined),
-            selectedIcon: Icon(Icons.credit_card_rounded, color: Color(0xFF0052CC)),
+          PmbNavItem(
             label: 'Rekening',
+            icon: Icons.credit_card_outlined,
+            activeIcon: Icons.credit_card,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.school_outlined),
-            selectedIcon: Icon(Icons.school_rounded, color: Color(0xFF0052CC)),
+          PmbNavItem(
             label: 'Jurusan',
+            icon: Icons.account_tree_outlined,
+            activeIcon: Icons.account_tree,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.people_outline_rounded),
-            selectedIcon: Icon(Icons.people_rounded, color: Color(0xFF0052CC)),
+          PmbNavItem(
             label: 'User',
+            icon: Icons.people_outline,
+            activeIcon: Icons.people,
           ),
         ],
       ),
