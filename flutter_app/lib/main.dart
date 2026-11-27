@@ -38,33 +38,59 @@ class _MicroPolibatamAppState extends State<MicroPolibatamApp> {
     }
   }
 
+  /// Pembungkus frame mobile `max-w-[430px]` dengan latar luar `#EEF2FA` dan bayangan halus
+  /// sama persis seperti `<div class="min-h-screen bg-[#EEF2FA] flex justify-center"><div class="w-full max-w-[430px] ...">` di Blade Views
+  Widget _wrapMobileFrame(Widget child) {
+    return ColoredBox(
+      color: const Color(0xFFEEF2FA),
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 430),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFBF8FF),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                blurRadius: 40,
+              ),
+            ],
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUser = store.currentUser;
 
     Widget homeScreen;
     if (currentUser == null) {
+      // Halaman Login menggunakan full-width gradient persis seperti `resources/views/auth/login.blade.php`
       homeScreen = LoginScreen(store: store);
     } else {
+      Widget roleShell;
       switch (currentUser.role) {
         case 'admin':
-          homeScreen = AdminShellScreen(store: store);
+          roleShell = AdminShellScreen(store: store);
           break;
         case 'keuangan':
-          homeScreen = KeuanganShellScreen(store: store);
+          roleShell = KeuanganShellScreen(store: store);
           break;
         case 'super_admin':
-          homeScreen = SuperAdminShellScreen(store: store);
+          roleShell = SuperAdminShellScreen(store: store);
           break;
         case 'maba':
         default:
-          homeScreen = MabaShellScreen(store: store);
+          roleShell = MabaShellScreen(store: store);
           break;
       }
+      homeScreen = _wrapMobileFrame(roleShell);
     }
 
     return MaterialApp(
-      title: 'Sistem PMB Microcredential Polibatam',
+      title: 'Masuk — Sistem PMB Microcredential Polibatam',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -77,12 +103,7 @@ class _MicroPolibatamAppState extends State<MicroPolibatamApp> {
         ),
         fontFamily: 'Segoe UI',
       ),
-      home: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 430),
-          child: homeScreen,
-        ),
-      ),
+      home: homeScreen,
     );
   }
 }
